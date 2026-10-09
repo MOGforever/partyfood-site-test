@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 40" role="img" aria-label="Partyfood chef hat">
+  <rect width="48" height="40" rx="6" fill="#122b1d"/>
+  <g fill="#F0C040">
+    <path d="M14 26a10 10 0 1 1 4-19a10 10 0 0 1 12 0a10 10 0 1 1 4 19v6H14z"/>
+  </g>
+</svg>
