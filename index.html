@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Partyfood.com — Nigerian Catering for Every Occasion</title>
+<meta name="description" content="Partyfood.com — Nigerian home cooking for birthdays, weddings, corporate and private events. Jollof rice, soups, pepper soups and swallow, plus Joy Sparkles liquid soap." />
+<meta name="theme-color" content="#122b1d" />
+<link rel="icon" href="public/favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="public/styles.css" />
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="root"></div>
+<script>
+fetch('public/index.html')
+  .then(r => r.text())
+  .then(html => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const root = document.getElementById('root');
+    if (root) {
+      root.innerHTML = temp.querySelector('body')?.innerHTML || temp.innerHTML;
+      const appJs = document.createElement('script');
+      appJs.src = 'public/app.js';
+      appJs.onerror = () => console.error('Failed to load app.js');
+      document.body.appendChild(appJs);
+    }
+  })
+  .catch(err => console.error('Failed to load site:', err));
+</script>
+</body>
+</html>
