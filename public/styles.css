@@ -278,6 +278,23 @@ a { color: inherit; }
 .site-footer a:hover { color: var(--gold-500); }
 .foot-legal { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 20px; font-size: 13px; color: rgba(248,243,230,.55); }
 
+/* ---------- Social icons ---------- */
+.ico-inline { display: inline-block; vertical-align: -4px; width: 18px; height: 18px; }
+.social-row { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.site-footer a.soc {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 3px 0; font-size: 14px; font-weight: 500; line-height: 1.2;
+}
+.site-footer a.soc em { font-style: normal; color: rgba(248,243,230,.6); }
+.site-footer a.soc .soc-ico {
+  width: 26px; height: 26px; flex: none; box-sizing: border-box;
+  padding: 3px; background: #fff; border-radius: 50%;
+  object-fit: contain; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  transition: transform .15s ease;
+}
+.site-footer a.soc:hover .soc-ico { transform: translateY(-2px); }
+.site-footer a.soc:hover em { color: var(--gold-500); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
   .hero-wrap::before { top: -120px; right: -90px; width: 420px; height: 420px; }
