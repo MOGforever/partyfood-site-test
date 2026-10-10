@@ -1,0 +1,30 @@
+{
+  "name": "Partyfood.com — booking enquiries",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "partyfood-booking",
+        "responseMode": "onReceived",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [0, 0],
+      "id": "b1d2c3e4-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Booking webhook",
+      "webhookId": "c2e3d4f5-6071-4b8c-9dae-1f2a3b4c5d6e"
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "versionId": "d3f4e5a6-7182-4c9d-aebf-1a2b3c4d5e6f",
+  "meta": {},
+  "active": false,
+  "tags": []
+}

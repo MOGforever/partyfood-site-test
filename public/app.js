@@ -1,14 +1,24 @@
 // Partyfood.com — booking form wiring
-// The form posts to an n8n webhook if WEBHOOK_URL is configured.
-// Until then it falls back to opening WhatsApp with a prefilled message,
-// so enquiries are never lost while you build the n8n flow.
+//
+// Primary path: POST the enquiry as JSON to an n8n webhook. Configure the URL
+// in public/config.js (generated from the PARTYFOOD_WEBHOOK_URL env var).
+// Fallback path: if no webhook is configured, or the request errors, times out
+// or is rejected, open WhatsApp with the same message prefilled. A booking
+// enquiry must never be lost.
 
-const WEBHOOK_URL = ""; // e.g. "https://your-n8n.host/webhook/partyfood-booking"
-const WHATSAPP_NUMBER = "2348130995848"; // international format, no "+" needed
+const CONFIG = (typeof window !== "undefined" && window.PARTYFOOD_CONFIG) || {};
+const WEBHOOK_URL = String(CONFIG.webhookUrl || "").trim();
+const WHATSAPP_NUMBER = String(CONFIG.whatsappNumber || "2348130995848").trim();
+const REQUEST_TIMEOUT_MS = 10000;
 
 const form = document.getElementById("book-form");
 const note = document.getElementById("form-note");
 const btn = document.getElementById("submit-btn");
+const yearEl = document.getElementById("year");
+
+// The site root injects this markup with innerHTML, so the inline <script> in
+// public/index.html never runs. Fill the footer year from here instead.
+if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
 function buildMessage(d) {
   const lines = [
@@ -35,41 +45,64 @@ function setNote(text, cls) {
   note.className = "form-note " + (cls || "");
 }
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!form.reportValidity()) return;
-  const data = Object.fromEntries(new FormData(form).entries());
-  const phone = data.contact ? data.contact.trim() : "";
-  if (!phone) {
-    setNote("Please add a phone number or email so we can reach you.", "err");
-    return;
-  }
-
-  btn.disabled = true;
-  const original = btn.textContent;
-  btn.textContent = "Sending…";
-  setNote("", "");
-
+async function sendToWebhook(payload) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    if (WEBHOOK_URL) {
-      const res = await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "partyfood-site", ...data }),
+    const res = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`webhook responded with HTTP ${res.status}`);
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+if (form && note && btn) {
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!form.reportValidity()) return;
+    const data = Object.fromEntries(new FormData(form).entries());
+    const contact = data.contact ? data.contact.trim() : "";
+    if (!contact) {
+      setNote("Please add a phone number or email so we can reach you.", "err");
+      return;
+    }
+
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = "Sending…";
+    setNote("", "");
+
+    try {
+      if (!WEBHOOK_URL) {
+        // No n8n webhook configured yet — WhatsApp is the delivery channel.
+        openWhatsApp(buildMessage(data));
+        setNote("Opening WhatsApp with your request — just press send!", "ok");
+        return;
+      }
+
+      await sendToWebhook({
+        source: "partyfood-site",
+        submittedAt: new Date().toISOString(),
+        ...data,
       });
-      if (!res.ok) throw new Error("webhook " + res.status);
       setNote("✅ Request sent! We'll get back to you shortly.", "ok");
       form.reset();
-    } else {
+    } catch (err) {
+      // Never lose the lead — fall back to WhatsApp with the full message.
+      console.warn("Booking webhook failed, falling back to WhatsApp:", err);
       openWhatsApp(buildMessage(data));
-      setNote("Opening WhatsApp with your request — just press send!", "ok");
+      setNote("We couldn't reach the server, so we opened WhatsApp for you.", "err");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
     }
-  } catch {
-    // Never lose the lead — fall back to WhatsApp with the full message.
-    openWhatsApp(buildMessage(data));
-    setNote("We couldn't reach the server, so we opened WhatsApp for you.", "err");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
-  }
-});
+  });
+} else {
+  console.warn("Partyfood: no booking form on this page, form wiring is idle.");
+}

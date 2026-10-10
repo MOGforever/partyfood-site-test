@@ -1,0 +1,11 @@
+{
+  "name": "partyfood-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Partyfood.com — static marketing site with an n8n-backed booking form.",
+  "scripts": {
+    "build": "node scripts/build-config.mjs",
+    "test": "node --test"
+  }
+}
