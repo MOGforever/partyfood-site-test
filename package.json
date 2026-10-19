@@ -6,6 +6,7 @@
   "description": "Partyfood.com — static marketing site with an n8n-backed booking form.",
   "scripts": {
     "build": "node scripts/build-config.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "verify:brief": "node n8n/.verify-brief.mjs"
   }
 }
