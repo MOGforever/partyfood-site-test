@@ -12,7 +12,7 @@ public/index.html       the actual page markup
 public/styles.css       all styling
 public/app.js           booking form wiring (webhook + WhatsApp fallback)
 public/config.js        GENERATED runtime config — see below
-public/assets/          photos, flyers and social icons
+public/assets/          dish photos, product photo and social icons
 scripts/build-config.mjs  generates public/config.js from env vars
 n8n/                    importable n8n workflow for booking enquiries
 tests/                  headless tests for the booking form wiring

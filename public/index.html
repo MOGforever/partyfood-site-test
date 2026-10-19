@@ -161,11 +161,56 @@
     <div class="wrap">
       <p class="kicker">Straight from the pot</p>
       <h2>See what we serve</h2>
-      <div class="gallery-grid">
-        <figure class="g-item tall"><img src="public/assets/flyer-nigerian-menu.png" alt="Menu flyer: rice, soups, pepper soups and swallow" loading="lazy" /></figure>
-        <figure class="g-item"><img src="public/assets/flyer-catering.png" alt="Catering flyer: canapés, sliders and skewers" loading="lazy" /></figure>
-        <figure class="g-item"><img src="public/assets/joy-sparkles-soap.jpg" alt="Joy Sparkles Liquid Soap product range" loading="lazy" /></figure>
+      <p class="section-lede swipe-hint">Swipe through the dishes <span aria-hidden="true">&rarr;</span></p>
+
+      <div class="carousel">
+        <button class="car-btn prev" id="car-prev" type="button" aria-label="Show previous dishes">&lsaquo;</button>
+        <div class="car-track" id="car-track" tabindex="0" role="group" aria-label="Dish photos — scroll horizontally to browse">
+          <figure class="car-slide">
+            <img src="public/assets/jollof-rice.jpg" alt="Smoky Nigerian jollof rice with vegetables" loading="lazy" />
+            <figcaption><strong>Jollof Rice</strong><span>Rice dishes</span></figcaption>
+          </figure>
+          <figure class="car-slide">
+            <img src="public/assets/fried-rice.jpg" alt="Nigerian fried rice with chicken, sweet corn, carrot and green peas" loading="lazy" />
+            <figcaption><strong>Fried Rice</strong><span>Rice dishes</span></figcaption>
+          </figure>
+          <figure class="car-slide">
+            <img src="public/assets/egusi-soup.jpg" alt="Egusi soup with pounded yam and assorted meats" loading="lazy" />
+            <figcaption><strong>Egusi Soup</strong><span>Soups</span></figcaption>
+          </figure>
+          <figure class="car-slide">
+            <img src="public/assets/ogbono-soup.jpg" alt="Ogbono soup with assorted meats" loading="lazy" />
+            <figcaption><strong>Ogbono Soup</strong><span>Soups</span></figcaption>
+          </figure>
+          <figure class="car-slide">
+            <img src="public/assets/banga-soup.jpg" alt="Banga soup made from palm fruit" loading="lazy" />
+            <figcaption><strong>Banga Soup</strong><span>Soups</span></figcaption>
+          </figure>
+          <figure class="car-slide">
+            <img src="public/assets/white-soup.jpg" alt="Nsala white soup, a Nigerian classic" loading="lazy" />
+            <figcaption><strong>White Soup</strong><span>Soups</span></figcaption>
+          </figure>
+          <figure class="car-slide">
+            <img src="public/assets/pepper-soup.jpg" alt="Catfish pepper soup with vegetables" loading="lazy" />
+            <figcaption><strong>Pepper Soup</strong><span>Pepper soups</span></figcaption>
+          </figure>
+          <figure class="car-slide">
+            <img src="public/assets/pounded-yam.jpg" alt="Pounded yam served with Nigerian soup" loading="lazy" />
+            <figcaption><strong>Pounded Yam</strong><span>Swallow</span></figcaption>
+          </figure>
+        </div>
+        <button class="car-btn next" id="car-next" type="button" aria-label="Show next dishes">&rsaquo;</button>
       </div>
+      <div class="car-dots" id="car-dots" role="tablist" aria-label="Gallery pages"></div>
+
+      <details class="photo-credits">
+        <summary>Photo credits</summary>
+        <p>Dish photos from <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>, licensed
+        <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>:
+        Jollof rice (Segun Famisa), fried rice (Bukky658), egusi soup (Onyenachi64), ogbono soup (Bukky658),
+        banga soup (Ehinomen55), white soup (Aderiqueza), catfish pepper soup (Halima Waziri),
+        pounded yam with white soup (Beendy234).</p>
+      </details>
     </div>
   </section>
 

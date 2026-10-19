@@ -106,3 +106,58 @@ if (form && note && btn) {
 } else {
   console.warn("Partyfood: no booking form on this page, form wiring is idle.");
 }
+
+// ---------- Gallery swipe carousel ----------
+// Scroll-snap does the swiping; this only wires the arrows, dots and keyboard.
+// Everything is null-guarded: the headless test DOM has none of these nodes.
+const carTrack = document.getElementById("car-track");
+const carPrev = document.getElementById("car-prev");
+const carNext = document.getElementById("car-next");
+const carDots = document.getElementById("car-dots");
+
+if (carTrack && carPrev && carNext && carDots && typeof document.createElement === "function") {
+  const slides = Array.from(carTrack.querySelectorAll(".car-slide"));
+  const dots = slides.map((_, i) => {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.setAttribute("role", "tab");
+    dot.setAttribute("aria-label", `Go to dish ${i + 1} of ${slides.length}`);
+    dot.setAttribute("aria-selected", i === 0 ? "true" : "false");
+    dot.addEventListener("click", () => scrollToSlide(i));
+    carDots.appendChild(dot);
+    return dot;
+  });
+
+  function stepSize() {
+    if (slides.length < 2) return carTrack.clientWidth;
+    return slides[1].offsetLeft - slides[0].offsetLeft;
+  }
+
+  function currentIndex() {
+    const step = stepSize();
+    if (!step) return 0;
+    return Math.max(0, Math.min(slides.length - 1, Math.round(carTrack.scrollLeft / step)));
+  }
+
+  function scrollToSlide(i) {
+    carTrack.scrollTo({ left: i * stepSize(), behavior: "smooth" });
+  }
+
+  function sync() {
+    const maxScroll = carTrack.scrollWidth - carTrack.clientWidth - 2;
+    const idx = currentIndex();
+    carPrev.disabled = carTrack.scrollLeft <= 2;
+    carNext.disabled = carTrack.scrollLeft >= maxScroll;
+    dots.forEach((dot, i) => dot.setAttribute("aria-selected", i === idx ? "true" : "false"));
+  }
+
+  carPrev.addEventListener("click", () => scrollToSlide(currentIndex() - 1));
+  carNext.addEventListener("click", () => scrollToSlide(currentIndex() + 1));
+  carTrack.addEventListener("scroll", sync, { passive: true });
+  carTrack.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") { e.preventDefault(); scrollToSlide(currentIndex() + 1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); scrollToSlide(currentIndex() - 1); }
+  });
+  window.addEventListener("resize", sync);
+  sync();
+}
