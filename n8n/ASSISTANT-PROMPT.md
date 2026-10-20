@@ -30,7 +30,7 @@ outside, which is why the notification channels below matter.
 | `public/app.js` | form wiring: webhook POST, timeout, WhatsApp fallback |
 | `public/config.js` | generated runtime config — `webhookUrl` + `whatsappNumber` |
 | `scripts/build-config.mjs` | regenerates `config.js` from `PARTYFOOD_WEBHOOK_URL` / `PARTYFOOD_WHATSAPP` |
-| `n8n/partyfood-booking-webhook.json` | importable single-node template: the webhook only, no delivery steps |
+| `n8n/partyfood-booking-webhook.json` | importable full workflow: webhook → clean fields → Sheets + email + Telegram, committed inactive |
 | `n8n/ASSISTANT-PROMPT.md` | this file |
 | `README.md` | setup, payload reference, CORS notes |
 
@@ -43,8 +43,17 @@ outside, which is why the notification channels below matter.
 | Response Mode | immediate `200` |
 | Allowed Origins (CORS) | `*` today; should become the real domain(s) |
 
-**What's missing — the job for the Assistant.** The template stops at the webhook, so today an
-enquiry arrives and goes nowhere. There is no logging, no email, no WhatsApp or Telegram alert.
+**The template now ships the whole flow.** `n8n/partyfood-booking-webhook.json` imports as a
+complete, *inactive* workflow: webhook → a Set node that cleans the fields → three parallel
+branches (Google Sheets append, email her, Telegram her), every delivery node set to continue
+on error. It is committed switched OFF and the site's `webhookUrl` stays empty until you say
+go, so nothing changes during her review of the site. What's left for a human: connect three
+credentials, pick the spreadsheet, fill in her email address and the Telegram chat ID, test
+once, activate, and paste the Production URL into `public/config.js`.
+
+**WhatsApp alert is intentionally not wired.** Meta only lets businesses send outside the
+24-hour service window via an approved Utility template, so that branch is deliberately left
+out of the template; Part 3 §4 documents it if you want to add it later.
 
 **Her contact details used by the site:** WhatsApp `+234 813 099 5848` (also the `tel:` link
 in the hero), Instagram `@Partyfood_com`, TikTok `@partyfoodchef1`.
@@ -56,8 +65,8 @@ in the hero), Instagram `@Partyfood_com`, TikTok `@partyfoodchef1`.
 | ⬜ | Value | Notes |
 | --- | --- | --- |
 | 1 | Her email address | Where order alerts should land. |
-| 2 | Google Sheet | Create a sheet named **Partyfood orders**, tab **Orders**, with the header row in Part 3 §2. Or let the Assistant tell you it can't find it. |
-| 3 | Meta WhatsApp template name | Must be an approved **Utility**-category template (see §4). If you don't have one yet, this is the one channel that can't work today — send the prompt anyway and keep that node disabled. |
+| 2 | Google Sheet | Create a sheet named **Partyfood orders**, tab **Orders**, with the 11 header labels from Part 3 §2 in row 1, then select it in the prebuilt Sheets node. |
+| 3 | Meta WhatsApp template *(optional, later)* | Only needed if you add the WhatsApp branch from §4. Must be an approved **Utility**-category template. The committed template ships without this branch on purpose. |
 | 4 | Telegram bot + her chat ID | Optional. Create a bot with **@BotFather**, have her send it `/start`, then read the `chat.id` from a Telegram Trigger run. |
 | 5 | Final domain | `https://partyfood.com` etc., for the CORS allow-list. |
 
@@ -67,6 +76,9 @@ take them. Credentials are connected by hand in n8n's credential screens afterwa
 ---
 
 ## Part 3 — Copy everything below into the n8n AI Assistant
+
+Only needed if you'd rather have the Assistant build the workflow in your instance instead of
+importing the JSON template — the committed template already implements exactly this spec.
 
 ```text
 Build one n8n workflow named "Partyfood.com — booking enquiries".
@@ -135,24 +147,28 @@ the customer wait on Sheets, email or WhatsApp.
 3. EMAIL HER
    Use the "Send Email" (SMTP) node as the primary route — I'll connect SMTP credentials.
    To: <HER EMAIL>
-   Subject: New Partyfood booking — {{ $json.eventType }} on {{ $json.date }}
+   Subject: New Partyfood booking — {{ $json['Event type'] }} on {{ $json['Event date'] }}
    Body (plain text):
      New booking request from the website.
 
-     Name:      {{ $json.name }}
-     Contact:   {{ $json.contact }}
-     Event:     {{ $json.eventType }}
-     Date:      {{ $json.date }}
-     Guests:    {{ $json.guests }}
-     Location:  {{ $json.location }}
-     Menu:      {{ $json.menuNotes }}
-     Notes:     {{ $json.notes }}
-     Received:  {{ $now.setZone('Africa/Lagos').toFormat('dd LLL yyyy, HH:mm') }}
+     Name:      {{ $json['Name'] }}
+     Contact:   {{ $json['Contact'] }}
+     Event:     {{ $json['Event type'] }}
+     Date:      {{ $json['Event date'] }}
+     Guests:    {{ $json['Guests'] }}
+     Location:  {{ $json['Location'] }}
+     Menu:      {{ $json['Menu'] }}
+     Notes:     {{ $json['Notes'] }}
+     Received:  {{ $json['Received'] }}
+   IMPORTANT: this node sits AFTER "Clean order fields", so it reads the CLEANED field names
+   shown above — raw keys like $json.eventType or $json.menuNotes no longer exist here. The
+   template JSON already ships with these expressions in place.
    Also mention in a sticky note that the identical field mapping works in the "Gmail" node
    (Send → Message) if I later switch this channel to Gmail — but do not build both.
 
-4. WHATSAPP HER — WhatsApp Business Cloud, template message
-   Reality check: this is Meta's WhatsApp Business Platform. Business-initiated messages
+4. WHATSAPP HER — OPTIONAL, NOT IN THE COMMITTED TEMPLATE — WhatsApp Business Cloud, template message
+   Skip this whole section unless I ask for it; the committed template deliberately ships
+   without this branch. Reality check: this is Meta's WhatsApp Business Platform. Business-initiated messages
    outside a 24-hour customer service window must use an APPROVED TEMPLATE, so a plain
    free-text send will not work reliably here. Build it as:
    - Node: WhatsApp Business Cloud, Resource: Message, Operation: Send Template
@@ -175,9 +191,10 @@ the customer wait on Sheets, email or WhatsApp.
      "🎉 New Partyfood booking".
 
 6. WIRING AND RELIABILITY
-   - Fan out: after "Clean order fields", run Google Sheets, Email, WhatsApp and Telegram as
-     PARALLEL branches, not a chain. One channel must never block the others.
-   - Set every one of those four nodes to continue on error (On Error → Continue, or
+   - Fan out: after "Clean order fields", run Google Sheets, Email and Telegram as
+     PARALLEL branches, not a chain (add WhatsApp as a fourth only if §4 was requested).
+     One channel must never block the others.
+   - Set every one of those delivery nodes to continue on error (On Error → Continue, or
      "Continue On Fail"), because the browser has already been told 200 and a single broken
      channel must not stop the rest of the delivery.
    - Turn on saving failed executions so I can see when a channel breaks.
@@ -202,13 +219,14 @@ BEFORE YOU FINISH
 
 ---
 
-## Part 4 — After the Assistant builds it
+## Part 4 — After the template (or the Assistant) is in place
 
 1. **Connect credentials** in each node: Google Sheets (OAuth2), SMTP (host, port, her email +
-   app password), WhatsApp Business Cloud (business account ID, phone number ID, permanent
-   access token), Telegram (bot token).
+   app password), Telegram (bot token). WhatsApp Business Cloud (business account ID, phone
+   number ID, permanent access token) is only needed if you added the §4 branch.
 2. **Create the sheet** — `Partyfood orders` / tab `Orders` — and paste the 11 header labels
-   from §2 into row 1, or the append will create junk columns.
+   from §2 into row 1, then select it in the Sheets node, or the append will create junk
+   columns. A sticky note baked into the template lists these steps on the canvas.
 3. **Activate the workflow**, then copy the **Production** webhook URL — not the Test one —
    into `public/config.js`:
 
@@ -226,10 +244,10 @@ BEFORE YOU FINISH
 
 ### Things that will bite
 
-- **The WhatsApp template is the long pole.** A WhatsApp Business account, a verified number
-  and an approved Utility template have to exist before that node can send anything. Email and
-  Telegram have no such gate — that's why they're worth having even if WhatsApp is the one she
-  cares about.
+- **The WhatsApp template is the long pole — and that's why the template skips it.** A WhatsApp
+  Business account, a verified number and an approved Utility template have to exist before
+  that branch can send anything. Email and Telegram have no such gate — that's why they're the
+  two alerts wired into the committed template.
 - **`Respond: Immediately` matters.** If the browser waits on the whole workflow and takes more
   than 10 seconds, the form silently falls back to WhatsApp and n8n still logs a success.
 - **The webhook is public.** Anyone who finds the URL can post to it. Treat submissions as

@@ -9,6 +9,12 @@ const markup = read("public/index.html");
 const tmpl = JSON.parse(read("n8n/partyfood-booking-webhook.json"));
 const config = read("public/config.js");
 
+// Header labels shared by the Set node, the sheet, the brief and README — one source of truth.
+const headerLabels = [
+  "Received", "Name", "Contact", "Event type", "Event date",
+  "Guests", "Location", "Menu", "Notes", "Source", "Submitted at",
+];
+
 let failures = 0;
 const check = (name, ok, detail) => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? `  — ${detail}` : ""}`);
@@ -64,10 +70,6 @@ check("Instagram handle matches live markup", doc.includes("@Partyfood_com") && 
 check("site domain claim present", doc.includes("https://mogforever.github.io/partyfood-site-test/"));
 
 // 4. Google Sheets field names in the brief == the mapping documented in README (no drift)
-const headerLabels = [
-  "Received", "Name", "Contact", "Event type", "Event date",
-  "Guests", "Location", "Menu", "Notes", "Source", "Submitted at",
-];
 for (const label of headerLabels) {
   check(`sheet column "${label}" documented`, doc.includes(`- ${label}`));
 }
@@ -87,7 +89,50 @@ check(
   doc.includes("falls back to opening WhatsApp") && appJs.includes("openWhatsApp(buildMessage(data))"),
 );
 
-// 6. Every file the brief lists actually exists
+// 6. Template workflow shape — the full flow, safe to import but NOT live
+const byName = Object.fromEntries(tmpl.nodes.map((n) => [n.name, n]));
+const setAssignments = (byName["Clean order fields"]?.parameters?.assignments?.assignments) || [];
+const setNames = setAssignments.map((a) => a.name);
+check(
+  "template ships the full flow: webhook → Set → 3 delivery branches",
+  tmpl.nodes.some((n) => n.type === "n8n-nodes-base.webhook") &&
+    !!byName["Clean order fields"] &&
+    !!byName["Log to Google Sheets"] &&
+    !!byName["Email her"] &&
+    !!byName["Telegram her"],
+  tmpl.nodes.map((n) => n.name).join(" | "),
+);
+check(
+  "Set node outputs exactly the 11 header labels, in order",
+  JSON.stringify(setNames) === JSON.stringify(headerLabels),
+  setNames.join(","),
+);
+const setMapsRawFormKeys = setAssignments.length === headerLabels.length &&
+  setAssignments.every((a, i) => a.name === headerLabels[i]);
+check("Set node maps from the real form keys", setMapsRawFormKeys && setAssignments.some((a) => /\$json\.(name|eventType|menuNotes)/.test(a.value)));
+for (const branch of ["Log to Google Sheets", "Email her", "Telegram her"]) {
+  check(`"${branch}" continues on error`, byName[branch]?.onError === "continueRegularOutput");
+}
+const sheetCols = byName["Log to Google Sheets"]?.parameters?.columns;
+check(
+  "Sheets node auto-maps the Set node's fields",
+  sheetCols?.mappingMode === "autoMapInputData",
+  sheetCols?.mappingMode,
+);
+check("template is committed INACTIVE (nothing goes live until activated)", tmpl.active === false);
+check("template has exactly one webhook node", tmpl.nodes.filter((n) => n.type === "n8n-nodes-base.webhook").length === 1);
+check("template does NOT ship a WhatsApp branch (needs approved Meta template)", !tmpl.nodes.some((n) => n.type?.includes("whatsApp")));
+check("email/Telegram expressions use CLEANED field names (they run after the Set node)",
+  byName["Email her"]?.parameters?.subject?.includes("$json['Event type']") &&
+  byName["Telegram her"]?.parameters?.text?.includes("$json['Name']"));
+check("email/Telegram target slots left EMPTY for hand-filled credentials",
+  byName["Email her"]?.parameters?.toEmail === "" && byName["Telegram her"]?.parameters?.chatId === "");
+check("brief says the workflow stays off until she approves",
+  doc.includes("committed switched OFF") && doc.includes("`webhookUrl` stays empty"));
+check("brief says the site config keeps the webhookUrl empty until go-live",
+  doc.includes("stays empty until you say") || doc.includes("stays empty until you say\ngo") || /stays empty until you say/.test(doc));
+
+// 7. Every file the brief lists actually exists
 for (const p of ["public/app.js", "public/config.js", "scripts/build-config.mjs", "n8n/partyfood-booking-webhook.json"]) {
   let ok = true;
   try { read(p); } catch { ok = false; }

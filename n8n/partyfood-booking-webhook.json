@@ -16,14 +16,145 @@
       "id": "b1d2c3e4-5f60-4a7b-8c9d-0e1f2a3b4c5d",
       "name": "Booking webhook",
       "webhookId": "c2e3d4f5-6071-4b8c-9dae-1f2a3b4c5d6e"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "f01", "name": "Received", "value": "={{ $now.setZone('Africa/Lagos').toFormat('dd LLL yyyy, HH:mm') }}", "type": "string" },
+            { "id": "f02", "name": "Name", "value": "={{ $json.name }}", "type": "string" },
+            { "id": "f03", "name": "Contact", "value": "={{ $json.contact }}", "type": "string" },
+            { "id": "f04", "name": "Event type", "value": "={{ $json.eventType }}", "type": "string" },
+            { "id": "f05", "name": "Event date", "value": "={{ $json.date }}", "type": "string" },
+            { "id": "f06", "name": "Guests", "value": "={{ $json.guests }}", "type": "string" },
+            { "id": "f07", "name": "Location", "value": "={{ $json.location }}", "type": "string" },
+            { "id": "f08", "name": "Menu", "value": "={{ $json.menuNotes }}", "type": "string" },
+            { "id": "f09", "name": "Notes", "value": "={{ $json.notes }}", "type": "string" },
+            { "id": "f10", "name": "Source", "value": "={{ $json.source }}", "type": "string" },
+            { "id": "f11", "name": "Submitted at", "value": "={{ $json.submittedAt }}", "type": "string" }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0],
+      "id": "c3d4e5f6-7182-4c9d-ae0b-2c3d4e5f6a7b",
+      "name": "Clean order fields"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Orders"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [460, -160],
+      "id": "d4e5f6a7-8293-4d0e-bf1c-3d4e5f6a7b8c",
+      "name": "Log to Google Sheets",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "",
+        "subject": "New Partyfood booking — {{ $json['Event type'] }} on {{ $json['Event date'] }}",
+        "emailFormat": "text",
+        "text": "=New booking request from the website.\n\nName:      {{ $json['Name'] }}\nContact:   {{ $json['Contact'] }}\nEvent:     {{ $json['Event type'] }}\nDate:      {{ $json['Event date'] }}\nGuests:    {{ $json['Guests'] }}\nLocation:  {{ $json['Location'] }}\nMenu:      {{ $json['Menu'] }}\nNotes:     {{ $json['Notes'] }}\nReceived:  {{ $json['Received'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [460, 0],
+      "id": "e5f6a7b8-93a4-4e1f-c02d-4e5f6a7b8c9d",
+      "name": "Email her",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "=🎉 New Partyfood booking\n\n👤 {{ $json['Name'] }} — {{ $json['Contact'] }}\n🎪 {{ $json['Event type'] }} on {{ $json['Event date'] }}\n👥 {{ $json['Guests'] }} guests\n📍 {{ $json['Location'] }}\n🍛 {{ $json['Menu'] }}\n📝 {{ $json['Notes'] }}\n🕒 {{ $json['Received'] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [460, 160],
+      "id": "f6a7b8c9-a4b5-4f20-d13e-5f6a7b8c9d0e",
+      "name": "Telegram her",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "height": 300,
+        "width": 440,
+        "content": "## Before activating\n1. Connect credentials: Google Sheets (OAuth2), SMTP (Send Email), Telegram API (bot token).\n2. Pick the *Partyfood orders* spreadsheet and the *Orders* tab in the Sheets node.\n3. Fill in From/To email in \"Email her\" and the chat ID in \"Telegram her\".\n4. She must send /start to the Telegram bot once before it can message her.\n5. Test with Execute Workflow, then Activate, then copy the Production URL into public/config.js → webhookUrl.\n\nWhatsApp notify is intentionally NOT wired here (needs an approved Meta Utility template) — see n8n/ASSISTANT-PROMPT.md §4.",
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 340],
+      "id": "a7b8c9d0-b5c6-4a31-e24f-6a7b8c9d0e1f",
+      "name": "Sticky Note"
     }
   ],
-  "connections": {},
+  "connections": {
+    "Booking webhook": {
+      "main": [
+        [
+          {
+            "node": "Clean order fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean order fields": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email her",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram her",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   },
   "pinData": {},
-  "versionId": "d3f4e5a6-7182-4c9d-aebf-1a2b3c4d5e6f",
+  "versionId": "e7c8d9f0-c6d7-4b42-f350-7b8c9d0e1f2a",
   "meta": {},
   "active": false,
   "tags": []

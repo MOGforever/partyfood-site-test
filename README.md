@@ -71,7 +71,22 @@ by hand only for path A.
 ## 2. Build the n8n workflow
 
 Import [`n8n/partyfood-booking-webhook.json`](n8n/partyfood-booking-webhook.json)
-into n8n, then **activate** the workflow. The incoming URL becomes:
+into n8n. It is the whole flow, not just the trigger:
+
+```
+Webhook → Clean order fields → ┬ Google Sheets (append row)
+                               ├ Email her (SMTP)
+                               └ Telegram her
+```
+
+Every delivery node is set to **continue on error**, so one broken channel
+never blocks the others, and the browser gets its `200` before any of that
+runs. The workflow is committed **inactive** on purpose and the site's
+`webhookUrl` is still empty — nothing goes live until the owner approves
+the site. [`n8n/ASSISTANT-PROMPT.md`](n8n/ASSISTANT-PROMPT.md) has the full
+setup checklist (credentials, sheet headers, activation, go-live).
+
+Once activated, the incoming URL becomes:
 
 ```
 https://<your-n8n-host>/webhook/partyfood-booking
@@ -84,11 +99,10 @@ Webhook node settings used:
 | HTTP Method    | `POST`                           |
 | Path           | `partyfood-booking`              |
 | Response Mode  | `onReceived` (immediate `200`)   |
-| Allowed Origins (CORS) | `*`                     |
-
-The template is a single Webhook node, so imported executions show the raw
-payload. Add your own node after it — email, Google Sheets, Airtable, Slack — to
-deliver the enquiry.
+| Allowed Origins (CORS) | `*`                     |The template is one Webhook node plus the delivery branches above; the
+webhook node itself is what the site talks to. WhatsApp is intentionally
+not wired (Meta requires an approved Utility template) — see
+`n8n/ASSISTANT-PROMPT.md` §4 if you want to add it later.
 
 **CORS.** `Allowed Origins (CORS)` defaults to `*`, which is what the form needs
 while the site moves between hosts (GitHub Pages now, Vercel later). Once the
